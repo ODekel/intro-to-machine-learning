@@ -7,7 +7,7 @@ from tqdm import trange, tqdm
 # - example: (n_features, 1)
 # - label: (n_classes, 1)
 # - weights: (n_features, n_classes)
-def train(example: npt.NDArray[np.float32], label: npt.NDArray[np.int8], weights: npt.NDArray[np.float32]) -> None:
+def train_once(example: npt.NDArray[np.float32], label: npt.NDArray[np.int8], weights: npt.NDArray[np.float32]) -> None:
     misclassified = (np.sign(weights.T @ example).astype(np.int8) != label).squeeze()
     weights[:, misclassified] += example @ label[misclassified].T
 
@@ -24,7 +24,7 @@ def pocket_train(examples: npt.NDArray[np.float32], labels: npt.NDArray[np.int8]
         pbar = tqdm(examples, desc='Examples')
         pbar.set_postfix({'Best Score': best_score})
         for i, (example, label) in enumerate(zip(pbar, labels)):
-            train(example[:, None], label[:, None], weights)
+            train_once(example[:, None], label[:, None], weights)
             if i % test_interval == 0:
                 curr_score = test(examples, labels, weights)
                 if curr_score > best_score:
