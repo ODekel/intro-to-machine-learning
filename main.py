@@ -3,7 +3,9 @@ from tensorflow.keras.datasets import fashion_mnist
 
 from perceptron import pocket_train as perceptron_pocket_train
 from softmax_regression import train as smr_train
+from svm import train as svm_train
 from vis import display_stats
+from feature_engineering import fit_pca, apply_pca, expand_poly
 
 # Load dataset
 (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
@@ -32,6 +34,7 @@ y_test_zero_one[np.arange(y_test.shape[0]), y_test] = 1
 print("Training set:", x_train.shape, x_train.dtype, y_train_neg_one_one.shape, y_train_neg_one_one.dtype)
 print("Test set:", x_test.shape, x_test.dtype, y_test_neg_one_one.shape, y_test_neg_one_one.dtype)
 
+
 perceptron_weights = np.zeros((x_train.shape[1], y_train_neg_one_one.shape[1]), dtype=np.float32)
 perceptron_pocket_train(x_train, y_train_neg_one_one, perceptron_weights)
 display_stats(x_test, y_test_neg_one_one, perceptron_weights)
@@ -39,3 +42,27 @@ display_stats(x_test, y_test_neg_one_one, perceptron_weights)
 smr_weights = np.zeros((x_train.shape[1], y_train_zero_one.shape[1]), dtype=np.float32)
 smr_train(x_train, y_train_zero_one, smr_weights, epochs=3)
 display_stats(x_test, y_test_zero_one, smr_weights)
+
+
+print("Computing Polynomial Features (Degree 2) on PCA data...")
+# 1. First run PCA to reduce dimensions (784 is too large for O(n^2) poly features)
+X_tr = x_train[:, 1:]
+X_te = x_test[:, 1:]
+
+P, mean = fit_pca(X_tr, 60)
+
+# Normalise the PCA outputs so polynomials don't explode exponentially
+# (helps condition the gradient descent)
+X_tr_pca_raw = apply_pca(X_tr, P, mean)
+X_te_pca_raw = apply_pca(X_te, P, mean)
+
+pca_std = np.std(X_tr_pca_raw, axis=0) + 1e-8
+X_tr_pca = X_tr_pca_raw / pca_std
+X_te_pca = X_te_pca_raw / pca_std
+x_train_poly = expand_poly(X_tr_pca)
+x_test_poly = expand_poly(X_te_pca)
+
+svm_poly_weights = np.zeros((x_train_poly.shape[1], y_train_neg_one_one.shape[1]), dtype=np.float32)
+# Using a larger learning rate and more epochs since features are normalised
+svm_train(x_train_poly, y_train_neg_one_one, svm_poly_weights, epochs=35, learning_rate=0.01, lambda_param=0.0001)
+display_stats(x_test_poly, y_test_neg_one_one, svm_poly_weights)
