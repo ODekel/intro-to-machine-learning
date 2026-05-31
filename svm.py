@@ -12,20 +12,14 @@ def train_batch(x_batch: npt.NDArray[np.float32], y_batch: npt.NDArray[np.int8],
     for c in range(y_batch.shape[1]):
         y = y_batch[:, c]
 
-        # Forward pass: compute margin (bias is organically included in X)
         margin = y * (x_batch @ weights[:, c])
 
-        # Misclassified or inside margin
         misclassified = margin < 1
 
-        # Gradients
-        # L2 Penalty only applies to features, not the assumed bias (index 0)
-        # We scale the L2 penalty correctly to not implicitly depend on batch size.
         d_w = np.zeros_like(weights[:, c])
         d_w[1:] = 2 * lambda_param * weights[1:, c] / x_batch.shape[0]
 
         if np.any(misclassified):
-            # Gradients from hinge loss
             d_w -= np.sum(y[misclassified, None] * x_batch[misclassified], axis=0) / x_batch.shape[0]
 
         # Update weights

@@ -45,14 +45,11 @@ display_stats(x_test, y_test_zero_one, smr_weights)
 
 
 print("Computing Polynomial Features (Degree 2) on PCA data...")
-# 1. First run PCA to reduce dimensions (784 is too large for O(n^2) poly features)
 x_tr = x_train[:, 1:]
 x_te = x_test[:, 1:]
 
 p, mean = fit_pca(x_tr, 60)
 
-# Normalise the PCA outputs so polynomials don't explode exponentially
-# (helps condition the gradient descent)
 x_tr_pca_raw = apply_pca(x_tr, p, mean)
 x_te_pca_raw = apply_pca(x_te, p, mean)
 
@@ -63,7 +60,6 @@ x_train_poly = expand_poly(x_tr_pca)
 x_test_poly = expand_poly(x_te_pca)
 
 svm_poly_weights = np.zeros((x_train_poly.shape[1], y_train_neg_one_one.shape[1]), dtype=np.float32)
-# Using a larger learning rate and more epochs since features are normalised
 svm_train(x_train_poly, y_train_neg_one_one, svm_poly_weights, epochs=35, batch_size=100, learning_rate=0.01,
           lambda_param=0.0001)
 display_stats(x_test_poly, y_test_neg_one_one, svm_poly_weights)
